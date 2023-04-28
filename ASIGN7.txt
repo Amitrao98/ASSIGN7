@@ -1,0 +1,142 @@
+Solution:
+
+Step 1: Download the data
+
+The data is downloaded from the given GitHub repository using the following link:
+https://github.com/shashank-mishra219/Hive-Class/blob/main/sales_order_data.csv
+
+Step 2: Store raw data into HDFS location
+
+Assuming Hadoop and Hive are already installed and configured, we can create a directory in HDFS using the following command:
+
+bash
+Copy code
+hdfs dfs -mkdir /hive-assignment
+Next, we can copy the raw data file into the HDFS directory using the following command:
+
+bash
+Copy code
+hdfs dfs -put /path/to/sales_order_data.csv /hive-assignment
+Step 3: Create an internal Hive table "sales_order_csv"
+
+We can create an internal Hive table "sales_order_csv" using the following query:
+
+c
+Copy code
+CREATE TABLE sales_order_csv (
+Order_ID int,
+Order_Date string,
+Product_ID string,
+Product_Name string,
+Quantity int,
+Price double,
+Customer_Country string,
+Customer_City string,
+Sales_Rep string
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+TBLPROPERTIES ("skip.header.line.count"="1");
+In the above query, we have defined the columns of the table and specified that the table is stored as a text file with fields separated by commas. We have also set the "skip.header.line.count" property to 1 to skip the header row in the CSV file.
+
+Step 4: Load data from HDFS path into "sales_order_csv"
+
+We can load data from the HDFS path into the "sales_order_csv" table using the following query:
+
+sql
+Copy code
+LOAD DATA INPATH '/hive-assignment/sales_order_data.csv' INTO TABLE sales_order_csv;
+Step 5: Create an internal Hive table "sales_order_orc"
+
+We can create an internal Hive table "sales_order_orc" in ORC format using the following query:
+
+c
+Copy code
+CREATE TABLE sales_order_orc (
+Order_ID int,
+Order_Date string,
+Product_ID string,
+Product_Name string,
+Quantity int,
+Price double,
+Customer_Country string,
+Customer_City string,
+Sales_Rep string
+)
+STORED AS ORC;
+In the above query, we have defined the columns of the table and specified that the table is stored in ORC format.
+
+Step 6: Load data from "sales_order_csv" into "sales_order_orc"
+
+We can load data from the "sales_order_csv" table into the "sales_order_orc" table using the following query:
+
+sql
+Copy code
+INSERT INTO TABLE sales_order_orc SELECT * FROM sales_order_csv;
+Now that we have created and loaded data into the "sales_order_orc" table, we can perform the requested queries.
+
+a. Calculate total sales per year
+
+SELECT year(Order_Date) AS Year, SUM(Price * Quantity) AS Total_Sales
+FROM sales_order_orc
+GROUP BY year(Order_Date);
+
+b. Find a product for which maximum orders were placed
+
+vbnet
+Copy code
+SELECT Product_Name, SUM(Quantity) AS Total_Quantity
+FROM sales_order_orc
+GROUP BY Product_Name
+ORDER BY Total_Quantity DESC
+LIMIT 1;
+
+c. Calculate the total sales for each quarter
+
+scss
+Copy code
+SELECT
+CONCAT(year(Order_Date), '-', quarter(Order_Date)) AS Quarter,
+SUM(Price * Quantity) AS Total_Sales
+FROM sales_order_orc
+GROUP BY CONCAT(year(Order_Date), '-', quarter(Order_Date));
+
+d. In which quarter sales was minimum
+
+SELECT
+CONCAT(year(Order_Date), '-', quarter(Order_Date))
+
+E. In which country sales was maximum and in which country sales was minimum
+sql
+Copy code
+SELECT country, SUM(sales) AS total_sales
+FROM sales_order_orc
+GROUP BY country
+ORDER BY total_sales DESC
+LIMIT 1; -- Country with maximum sales
+
+SELECT country, SUM(sales) AS total_sales
+FROM sales_order_orc
+GROUP BY country
+ORDER BY total_sales ASC
+LIMIT 1; -- Country with minimum sales
+
+F.Calculate quarterly sales for each city
+sql
+Copy code
+SELECT city,
+YEAR(order_date) AS order_year,
+CONCAT('Q', CAST(QUARTER(order_date) AS STRING)) AS quarter,
+SUM(sales) AS quarterly_sales
+FROM sales_order_orc
+GROUP BY city, order_year, quarter;
+
+G. Find a month for each year in which maximum number of quantities were sold
+sql
+Copy code
+SELECT YEAR(order_date) AS order_year,
+CONCAT('Month-', CAST(MONTH(order_date) AS STRING)) AS month,
+MAX(quantity) AS max_quantity_sold
+FROM sales_order_orc
+GROUP BY order_year, month;
